@@ -42,6 +42,24 @@ static inline int nextPow2(int n) {
 // Also, as per the comments in cudaScan(), you can implement an
 // "in-place" scan, since the timing harness makes a copy of input and
 // places it in result
+__global__ void
+upsweep_phase_kernel(int* array, int N, int two_d) {
+    int two_dplus1 = 2 * two_d;
+    for (int i = 0; i < N; i += two_dplus1) {
+        array[i + two_dplus1 - 1] += array[i + two_d - 1];
+    }
+}
+
+__global__ void
+downsweep_phase_kernel(int* array, int N, int two_d) {
+    int two_dplus1 = 2 * two_d;
+    for (int i = 0; i < N; i += two_dplus1) {
+        int t = array[i + two_d - 1];
+        array[i + two_d - 1] = array[i + two_dplus1 - 1];
+        array[i + two_dplus1 - 1] += t;
+    }
+}
+
 void exclusive_scan(int* input, int N, int* result)
 {
 
@@ -53,8 +71,17 @@ void exclusive_scan(int* input, int N, int* result)
     // on the CPU.  Your implementation will need to make multiple calls
     // to CUDA kernel functions (that you must write) to implement the
     // scan.
+    const int threadsPerBlock = 512;
+    const int blocks = (N + threadsPerBlock - 1) / threadsPerBlock;
 
-
+    cudaMemcpy(result, input, N * sizeof(int), cudaMemcpyDeviceToDevice);
+    for (int two_d = 1; two_d <= N / 2; two_d *= 2) {
+        upsweep_phase_kernel<<<blocks, threadsPerBlock>>>(result, N, two_d);
+    }
+    result[N - 1] = 0;
+    for (int two_d = N / 2; two_d >= 1; two_d /= 2) {
+        downsweep_phase_kernel<<<blocks, threadsPerBlock>>>(result, N, two_d);
+    }
 }
 
 
