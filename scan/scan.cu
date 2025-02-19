@@ -48,11 +48,8 @@ __global__ void
 upsweep_phase_kernel(int* array, int N, int two_d) {
     int idx = threadIdx.x + blockIdx.x * blockDim.x;
     int two_dplus1 = 2 * two_d;
-    if (idx % two_dplus1 == 0) {
+    if (idx % two_dplus1 == 0 && i + two_dplus1 - 1 < N) {
         array[i + two_dplus1 - 1] += array[i + two_d - 1];
-        // if (i + two_dplus1 - 1 < N) {
-        //     array[i + two_dplus1 - 1] += array[i + two_d - 1];
-        // }
     }
 }
 
@@ -60,7 +57,7 @@ __global__ void
 downsweep_phase_kernel(int* array, int N, int two_d) {
     int idx = threadIdx.x + blockIdx.x * blockDim.x;
     int two_dplus1 = 2 * two_d;
-    if (idx % two_dplus1 == 0) {
+    if (idx % two_dplus1 == 0 && i + two_dplus1 - 1 < N) {
         int t = array[i + two_d - 1];
         array[i + two_d - 1] = array[i + two_dplus1 - 1];
         array[i + two_dplus1 - 1] += t;
@@ -87,7 +84,8 @@ void exclusive_scan(int* input, int N, int* result)
     }
     std::cerr << "upsweep phase done, begin downsweep phase" << std::endl;
     // result is a device pointer
-    set_last_element_zero<<<1, 1>>>(result, N);
+    int val = 0;
+    cudaMemcpy(result + N - 1, &val, sizeof(int), cudaMemcpyHostToDevice);
     result[N - 1] = 0;
     for (int two_d = N / 2; two_d >= 1; two_d /= 2) {
         downsweep_phase_kernel<<<blocks, threadsPerBlock>>>(result, N, two_d);
