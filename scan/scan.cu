@@ -86,7 +86,6 @@ void exclusive_scan(int* input, int N, int* result)
     // result is a device pointer
     int val = 0;
     cudaMemcpy(result + N - 1, &val, sizeof(int), cudaMemcpyHostToDevice);
-    result[N - 1] = 0;
     for (int two_d = N / 2; two_d >= 1; two_d /= 2) {
         downsweep_phase_kernel<<<blocks, threadsPerBlock>>>(result, N, two_d);
     }
