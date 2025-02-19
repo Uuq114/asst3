@@ -46,23 +46,24 @@ static inline int nextPow2(int n) {
 // places it in result
 __global__ void
 upsweep_phase_kernel(int* array, int N, int two_d) {
+    int idx = threadIdx.x + blockIdx.x * blockDim.x;
     int two_dplus1 = 2 * two_d;
-    for (int i = 0; i < N; i += two_dplus1) {
-        if (i + two_dplus1 - 1 < N) {
-            array[i + two_dplus1 - 1] += array[i + two_d - 1];
-        }
+    if (idx % two_dplus1 == 0) {
+        array[i + two_dplus1 - 1] += array[i + two_d - 1];
+        // if (i + two_dplus1 - 1 < N) {
+        //     array[i + two_dplus1 - 1] += array[i + two_d - 1];
+        // }
     }
 }
 
 __global__ void
 downsweep_phase_kernel(int* array, int N, int two_d) {
+    int idx = threadIdx.x + blockIdx.x * blockDim.x;
     int two_dplus1 = 2 * two_d;
-    for (int i = 0; i < N; i += two_dplus1) {
-        if (i + two_dplus1 - 1 < N) {
-            int t = array[i + two_d - 1];
-            array[i + two_d - 1] = array[i + two_dplus1 - 1];
-            array[i + two_dplus1 - 1] += t;
-        }
+    if (idx % two_dplus1 == 0) {
+        int t = array[i + two_d - 1];
+        array[i + two_d - 1] = array[i + two_dplus1 - 1];
+        array[i + two_dplus1 - 1] += t;
     }
 }
 
@@ -85,6 +86,8 @@ void exclusive_scan(int* input, int N, int* result)
         upsweep_phase_kernel<<<blocks, threadsPerBlock>>>(result, N, two_d);
     }
     std::cerr << "upsweep phase done, begin downsweep phase" << std::endl;
+    // result is a device pointer
+    set_last_element_zero<<<1, 1>>>(result, N);
     result[N - 1] = 0;
     for (int two_d = N / 2; two_d >= 1; two_d /= 2) {
         downsweep_phase_kernel<<<blocks, threadsPerBlock>>>(result, N, two_d);
