@@ -25,7 +25,7 @@ else
 # Building on Linux
 LDFLAGS=-L/usr/local/cuda/lib64/ -lcudart
 endif
-NVCC=nvcc
+NVCC=/usr/local/cuda/bin/nvcc
 NVCCFLAGS=-O3 -m64
 
 
