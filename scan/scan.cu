@@ -49,7 +49,7 @@ upsweep_kernel(int* array, int N, int two_d) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int two_dplus1 = 2 * two_d;
 
-    if (idx % two_dplus1 == 0 && i + two_dplus1 - 1 < N) {
+    if (idx % two_dplus1 == 0 && idx + two_dplus1 - 1 < N) {
         array[idx + two_dplus1 - 1] += array[idx + two_d - 1];
     }
 }
@@ -64,7 +64,7 @@ downsweep_kernel(int* array, int N, int two_d) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int two_dplus1 = 2 * two_d;
 
-    if (idx % two_dplus1 == 0 && i + two_dplus1 - 1 < N) {
+    if (idx % two_dplus1 == 0 && idx + two_dplus1 - 1 < N) {
         int t = array[idx + two_d - 1];
         array[idx + two_d - 1] = array[idx + two_dplus1 - 1];
         array[idx + two_dplus1 - 1] += t;
