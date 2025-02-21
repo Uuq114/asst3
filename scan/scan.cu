@@ -48,10 +48,9 @@ __global__ void
 upsweep_kernel(int* array, int N, int two_d) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int two_dplus1 = 2 * two_d;
-    int i = idx * two_dplus1;
 
-    if (i + two_dplus1 - 1 < N) {
-        output[i + two_dplus1 - 1] += output[i + two_d - 1];
+    if (idx % two_dplus1 == 0 && i + two_dplus1 - 1 < N) {
+        array[idx + two_dplus1 - 1] += array[idx + two_d - 1];
     }
 }
 
@@ -64,12 +63,11 @@ __global__ void
 downsweep_kernel(int* array, int N, int two_d) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int two_dplus1 = 2 * two_d;
-    int i = idx * two_dplus1;
 
-    if (i + two_dplus1 - 1 < N) {
-        int t = output[i + two_d - 1];
-        output[i + two_d - 1] = output[i + two_dplus1 - 1];
-        output[i + two_dplus1 - 1] += t;
+    if (idx % two_dplus1 == 0 && i + two_dplus1 - 1 < N) {
+        int t = array[idx + two_d - 1];
+        array[idx + two_d - 1] = array[idx + two_dplus1 - 1];
+        array[idx + two_dplus1 - 1] += t;
     }
 }
 
@@ -88,7 +86,7 @@ void exclusive_scan(int* input, int N, int* result)
     int gridSize = (N + blockSize - 1) / blockSize;
 
     // upsweep
-    for (int two_d = 0; two_d <= N / 2; two_d *= 2) {
+    for (int two_d = 1; two_d <= N / 2; two_d *= 2) {
         upsweep_kernel<<<gridSize, blockSize>>>(result, N, two_d);
     }
 
