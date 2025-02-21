@@ -45,22 +45,31 @@ static inline int nextPow2(int n) {
 // "in-place" scan, since the timing harness makes a copy of input and
 // places it in result
 __global__ void
-upsweep_phase_kernel(int* array, int N, int two_d) {
-    int idx = threadIdx.x + blockIdx.x * blockDim.x;
+upsweep_kernel(int* array, int N, int two_d) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int two_dplus1 = 2 * two_d;
-    if (idx % two_dplus1 == 0 && idx + two_dplus1 - 1 < N) {
-        array[idx + two_dplus1 - 1] += array[idx + two_d - 1];
+    int i = idx * two_dplus1;
+
+    if (i + two_dplus1 - 1 < N) {
+        output[i + two_dplus1 - 1] += output[i + two_d - 1];
     }
 }
 
 __global__ void
-downsweep_phase_kernel(int* array, int N, int two_d) {
-    int idx = threadIdx.x + blockIdx.x * blockDim.x;
+set_last_elem_zero_kernel(int* array, int N) {
+    array[N - 1] = 0;
+}
+
+__global__ void
+downsweep_kernel(int* array, int N, int two_d) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int two_dplus1 = 2 * two_d;
-    if (idx % two_dplus1 == 0 && idx + two_dplus1 - 1 < N) {
-        int t = array[idx + two_d - 1];
-        array[idx + two_d - 1] = array[idx + two_dplus1 - 1];
-        array[idx + two_dplus1 - 1] += t;
+    int i = idx * two_dplus1;
+
+    if (i + two_dplus1 - 1 < N) {
+        int t = output[i + two_d - 1];
+        output[i + two_d - 1] = output[i + two_dplus1 - 1];
+        output[i + two_dplus1 - 1] += t;
     }
 }
 
@@ -75,21 +84,20 @@ void exclusive_scan(int* input, int N, int* result)
     // on the CPU.  Your implementation will need to make multiple calls
     // to CUDA kernel functions (that you must write) to implement the
     // scan.
-    const int threadsPerBlock = 512;
-    const int blocks = (N + threadsPerBlock - 1) / threadsPerBlock;
+    const int blockSize = 512;
+    int gridSize = (N + blockSize - 1) / blockSize;
 
-    cudaMemcpy(result, input, N * sizeof(int), cudaMemcpyDeviceToDevice);
-    for (int two_d = 1; two_d <= N / 2; two_d *= 2) {
-        upsweep_phase_kernel<<<blocks, threadsPerBlock>>>(result, N, two_d);
+    // upsweep
+    for (int two_d = 0; two_d <= N / 2; two_d *= 2) {
+        upsweep_kernel<<<gridSize, blockSize>>>(result, N, two_d);
     }
-    std::cerr << "upsweep phase done, begin downsweep phase" << std::endl;
-    // result is a device pointer
-    int val = 0;
-    cudaMemcpy(result + N - 1, &val, sizeof(int), cudaMemcpyHostToDevice);
+
+    set_last_elem_zero_kernel<<<1, 1>>>(result, N);
+
+    // downsweep
     for (int two_d = N / 2; two_d >= 1; two_d /= 2) {
-        downsweep_phase_kernel<<<blocks, threadsPerBlock>>>(result, N, two_d);
+        downsweep_kernel<<<gridSize, blockSize>>>(result, N, two_d);
     }
-    std::cerr << "begin downsweep phase done" << std::endl;
 }
 
 
