@@ -87,15 +87,15 @@ void exclusive_scan(int* input, int N, int* result)
     int gridSize = (roundedLength + blockSize - 1) / blockSize;
 
     // upsweep
-    for (int two_d = 1; two_d <= N / 2; two_d *= 2) {
-        upsweep_kernel<<<gridSize, blockSize>>>(result, N, two_d);
+    for (int two_d = 1; two_d <= roundedLength / 2; two_d *= 2) {
+        upsweep_kernel<<<gridSize, blockSize>>>(result, roundedLength, two_d);
     }
 
-    set_last_elem_zero_kernel<<<1, 1>>>(result, N);
+    set_last_elem_zero_kernel<<<1, 1>>>(result, roundedLength);
 
     // downsweep
-    for (int two_d = N / 2; two_d >= 1; two_d /= 2) {
-        downsweep_kernel<<<gridSize, blockSize>>>(result, N, two_d);
+    for (int two_d = roundedLength / 2; two_d >= 1; two_d /= 2) {
+        downsweep_kernel<<<gridSize, blockSize>>>(result, roundedLength, two_d);
     }
 }
 
