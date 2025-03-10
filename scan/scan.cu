@@ -82,8 +82,9 @@ void exclusive_scan(int* input, int N, int* result)
     // on the CPU.  Your implementation will need to make multiple calls
     // to CUDA kernel functions (that you must write) to implement the
     // scan.
+    int roundedLength = nextPow2(N);
     const int blockSize = 512;
-    int gridSize = (N + blockSize - 1) / blockSize;
+    int gridSize = (roundedLength + blockSize - 1) / blockSize;
 
     // upsweep
     for (int two_d = 1; two_d <= N / 2; two_d *= 2) {
